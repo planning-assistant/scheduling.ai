@@ -240,5 +240,9 @@ $RECYCLE.BIN/
 # Build folder
 
 */build/*
+*/deps/*
+build.toml
+
+*/.vscode/*
 
 # End of https://www.gitignore.io/api/osx,linux,python,windows,pycharm,visualstudiocode
