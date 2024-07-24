@@ -41,25 +41,25 @@ Resources:
         - python3.9
     Metadata:
       BuildMethod: python3.9
-  HelloWorldFunction:
+  SchedulingFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
       CodeUri: controller/
       Handler: app.lambda_handler
       Runtime: python3.9
       Architectures:
-      - x86_64
-      Layers:
-        - !Ref ModelLayer
-        - !Ref ServiceLayer
-        - !Ref RepositoryLayer
+        - x86_64
+      Role: !GetAtt SchedulingFunctionRole.Arn
+      # Layers:
+      #   - !Ref ModelLayer
+      #   - !Ref ServiceLayer
+      #   - !Ref RepositoryLayer
       Events:
-        HelloWorld:
+        SchedulingApi:
           Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
           Properties:
             Path: /hello
             Method: get
-
   ApplicationResourceGroup:
     Type: AWS::ResourceGroups::Group
     Properties:
@@ -72,17 +72,117 @@ Resources:
     Properties:
       ResourceGroupName:
         Ref: ApplicationResourceGroup
-      AutoConfigurationEnabled: 'true'
+      AutoConfigurationEnabled: true
+  TasksDynamoDBTable:
+    Type: AWS::DynamoDB::Table  # This defines the resource type as a DynamoDB table
+    Properties:
+      TableName: "tasks_2"  # Your table name
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+      AttributeDefinitions:
+        - AttributeName: "task_id"  # Your partition key
+          AttributeType: "S"  # String data type
+        - AttributeName: "user_id"  # Your sort key
+          AttributeType: "S"  # String data type
+        - AttributeName: "duration"  # Additional column
+          AttributeType: "N"  # Number data type (assuming duration is a number)
+        - AttributeName: "scheduled_time"  # Additional column
+          AttributeType: "S"  # String data type (assuming scheduled time is ISO 8601 format)
+        - AttributeName: "task_name"  # Additional column
+          AttributeType: "S"  # String data type
+        - AttributeName: "created_at"  # Additional column
+          AttributeType: "S"  # String data type (assuming created_at is ISO 8601 format)
+        - AttributeName: "updated_at"  # Additional column
+          AttributeType: "S"  # String data type (assuming updated_at is ISO 8601 format)
+      KeySchema:  # Define the table's primary key
+        - AttributeName: "task_id"  # Partition key in KeySchema
+          KeyType: "HASH"  # Partition key type
+        - AttributeName: "user_id"  # Sort key in KeySchema
+          KeyType: "RANGE"  # Sort key type (optional, but recommended for efficient queries)
+      GlobalSecondaryIndexes:
+        - IndexName: DurationIndex
+          KeySchema:
+          - AttributeName: "duration"
+            KeyType: "HASH"
+          Projection:
+            ProjectionType: "ALL"
+          ProvisionedThroughput: 
+            ReadCapacityUnits: 5
+            WriteCapacityUnits: 5
+        - IndexName: ScheduledTimeIndex
+          KeySchema:
+          - AttributeName: "scheduled_time"
+            KeyType: "HASH"
+          Projection:
+            ProjectionType: "ALL"
+          ProvisionedThroughput: 
+            ReadCapacityUnits: 5
+            WriteCapacityUnits: 5
+        - IndexName: TaskNameIndex
+          KeySchema:
+          - AttributeName: "task_name"
+            KeyType: "HASH"
+          Projection:
+            ProjectionType: "ALL"
+          ProvisionedThroughput: 
+            ReadCapacityUnits: 5
+            WriteCapacityUnits: 5
+        - IndexName: CreatedAtIndex
+          KeySchema:
+          - AttributeName: "created_at"
+            KeyType: "HASH"
+          Projection:
+            ProjectionType: "ALL"
+          ProvisionedThroughput: 
+            ReadCapacityUnits: 5
+            WriteCapacityUnits: 5
+        - IndexName: UpdatedAtIndex
+          KeySchema:
+          - AttributeName: "updated_at"
+            KeyType: "HASH"
+          Projection:
+            ProjectionType: "ALL"
+          ProvisionedThroughput: 
+            ReadCapacityUnits: 5
+            WriteCapacityUnits: 5
+      # You can add additional properties here like ProvisionedThroughput for read/write capacity
+  SchedulingFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: DynamoDBAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem  # Replace with actions your function needs (e.g., PutItem, DeleteItem)
+                Resource:
+                  - !GetAtt TasksDynamoDBTable.Arn
 Outputs:
   # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
   # Find out more about other implicit resources you can reference within SAM
   # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
-  HelloWorldApi:
+  SchedulingApi:
     Description: API Gateway endpoint URL for Prod stage for Hello World function
     Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/"
-  HelloWorldFunction:
+  SchedulingFunction:
     Description: Hello World Lambda Function ARN
-    Value: !GetAtt HelloWorldFunction.Arn
-  HelloWorldFunctionIamRole:
+    Value: !GetAtt SchedulingFunction.Arn
+  SchedulingFunctionIamRole:
     Description: Implicit IAM Role created for Hello World function
-    Value: !GetAtt HelloWorldFunctionRole.Arn
+    Value: !GetAtt SchedulingFunctionRole.Arn
+  TasksDynamoDBTableArn:
+    Description: ARN of the DynamoDB table
+    Value: !GetAtt TasksDynamoDBTable.Arn

@@ -1,6 +1,8 @@
 import json
 import logging
-from Task import Task
+import boto3
+# from Task import Task
+from datetime import datetime, timezone
 
 # import requests
 logger = logging.getLogger()
@@ -42,14 +44,37 @@ def lambda_handler(event, context):
     logger.info("---------------------")
     logger.info(event)
 
-    task1 = Task(1,"Finish report")
-    logger.info(task1)
+    # task1 = Task(1,"Finish report")
+    # logger.info(task1)
+    dynamo_db_client = boto3.client('dynamodb')
+
+    table_name = "tasks_2"
+    item = {
+        "task_id": {"S": "1234"},  # Replace with unique task ID
+        "user_id": {"S": "user1"},   # Replace with user ID
+        "duration": {"N": "3600"},   # Replace with duration in seconds (number as string)
+        "scheduled_time": {"S": "2024-07-25T10:00:00Z"},  # Replace with scheduled time in ISO 8601 format
+        "task_name": {"S": "Important Meeting"},  # Replace with task name
+        "created_at": {"S": str(datetime.now(timezone.utc))},  # Get current UTC time
+        "updated_at": {"S": str(datetime.now(timezone.utc))}   # Get current UTC time
+    }
+
+    response = dynamo_db_client.put_item(TableName=table_name, Item=item)
+
+    try:
+        response = dynamo_db_client.put_item(TableName=table_name, Item=item)
+        print(f"PutItem response: {response}")
+    except Exception as e:
+        print(f"Error writing to DynamoDB: {e}")
+
+    print(f"PutItem response: {response}")
 
     return {
         "statusCode": 200,
         "body": json.dumps({
-            "task": task1.name,
-            "time": task1.scheduled_time,
+            # "task": task1.name,
+            # "time": task1.scheduled_time,
             # "location": ip.text.replace("\n", "")
+            "task": "successful"
         }),
     }
