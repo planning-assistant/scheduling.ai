@@ -60,6 +60,25 @@ Resources:
           Properties:
             Path: /hello
             Method: get
+  HealthCheckFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+    Properties:
+      CodeUri: controller/
+      Handler: health.handler
+      Runtime: python3.9
+      Architectures:
+        - x86_64
+      Role: !GetAtt HealthFunctionRole.Arn
+      # Layers:
+      #   - !Ref ModelLayer
+      #   - !Ref ServiceLayer
+      #   - !Ref RepositoryLayer
+      Events:
+        HealthApi:
+          Type: Api # More info about API Event Source: XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+          Properties:
+            Path: /health
+            Method: get
   ApplicationResourceGroup:
     Type: AWS::ResourceGroups::Group
     Properties:
